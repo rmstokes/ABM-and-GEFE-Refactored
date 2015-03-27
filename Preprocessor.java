@@ -1,3 +1,8 @@
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 
 /*
@@ -16,11 +21,11 @@ public class Preprocessor {
 	public ArrayList<Double> directionResults;
 	public ArrayList<Double> curvatureAngleResults;
 	public ArrayList<Double> curvatureDistanceResults;
-	private boolean flag = false;
+	//private boolean flag = false;
 	// private static String subjectName;
-	public static double x_interval;
-	public static double y_interval;
-	public static double ratio_interval;
+	public double x_interval;
+	public double y_interval;
+	public double ratio_interval;
 	public static double x_max;
 	public static double y_max;
 	public static double ratio_max;
@@ -32,30 +37,156 @@ public class Preprocessor {
 	private static int numInstances;
 	private static int numTemplates;
 	private ArrayList<PointAndClick> pacList;
+	private ArrayList<String> cdfFileList;
 
-	public Preprocessor(ArrayList<PointAndClick> pacList) {
+	public Preprocessor(ArrayList<PointAndClick> pacList, double x_interval, double y_interval, 
+			double r_interval, double x_max, double y_max, double ratio_max) {
+		//xyr intervals will be used for binSizes in cdf function
 		this.pacList = pacList;
 		directionResults = new ArrayList<Double>();
 		curvatureAngleResults = new ArrayList<Double>();
 		curvatureDistanceResults = new ArrayList<Double>();
-		
+		this.x_interval = x_interval;
+		this.y_interval = y_interval;
+		ratio_interval = r_interval;
+		this.x_max = x_max;
+		this.y_max = y_max;
+		this.ratio_max = ratio_max;
+		cdfFileList = new ArrayList<String>();
 	}
 
+	
+	public String cdf(ArrayList<Double> metricList, double binSize, int subjectNumber, int instanceNumber,
+			int clickRegion, double max) {
+		// print out the number of values from metricList that fit into a given bin.
+		// do this for all the bins until all the items in the list are assigned
+		// to a bin.
+		boolean flag = true;
+		//add extension to filename to include the region#
+		//filename +=" Region: "+clickRegion;
+		String cdfType = "";
+		if (metricList.equals(directionResults)){
+			cdfType = "direction";
+		} else if (metricList.equals(curvatureAngleResults)){
+			cdfType = "curvature angle";
+		} else {
+			cdfType = "curvature distance";
+		}
+				
+		//System.exit(0);
+		String filename = "Subject "+subjectNumber+" Instance "+instanceNumber+" Region "+clickRegion;
+
+		PrintWriter out;
+		
+
+		// create low and high to represent range of bin
+		double low = 0.0;
+		double high = 0.0;
+		high = low + binSize;
+		
+		if (metricList.equals(directionResults)){
+			//overwrite the contents of cdf file base on file name
+			//but only when calculating the direction results
+			//every other metric will be appended to the file that directionResults overwrote
+			flag = false;
+			//System.out.println("flag set to false for direction result.");
+			//System.exit(0);
+		}
+
+		try {
+			out = new PrintWriter(new BufferedWriter(new FileWriter(filename,
+					flag)));
+			if (!flag) {
+				out.println(subjectNumber + " x_interval: " + x_interval
+						+ " y_interval: " + y_interval + " ratio_interval: "
+						+ ratio_interval + " x_max: " + x_max + " y_max: "
+						+ y_max + " ratio_max: " + ratio_max + " clickRegion: "+clickRegion);
+			}
+			out.print("cdf " + cdfType + ": ");
+			out.close();
+			//flag = true;
+
+		} catch (IOException e) {
+			// exception handling left as an exercise for the reader
+		}
+
+		int count = 0;
+		double percentage = 0.0;
+		int bin = 0;
+		while (low <= max) {
+			// keep creating bins and counting how many elements fall within the
+			// bins
+			// until max# has been inserted and counted in a bin.
+
+			// loop through list to find number of items below high point of
+			// bin.
+			for (int i = 0; i < metricList.size(); i++) {
+				if ((double) metricList.get(i) <= high) {
+					// found item within bin between low and high.
+					count++;
+				}
+			}// end for loop
+
+			// transform the count to a percentage for cdf.
+			percentage = (double) (count) / metricList.size();
+			System.out.println("filename: "+filename);
+			System.out.println("percentage: " + percentage);
+			System.out.println("count: "+count);
+			System.out.println("metricList.size(): "+metricList.size());
+			//System.exit(0);
+			try {
+				out = new PrintWriter(new BufferedWriter(new FileWriter(
+						filename, true)));
+				out.print(percentage + " ");
+				out.close();
+			} catch (IOException e) {
+				// exception handling left as an exercise for the reader
+			}
+
+			count = 0;
+			bin++;
+			low = high;
+			high = low + binSize;
+			//System.out.println("low: "+low);
+			//System.out.println("high: "+high);
+			//System.exit(0);
+		}// end while loop
+
+		try {
+			out = new PrintWriter(new BufferedWriter(new FileWriter(filename,
+					true)));
+			out.println();
+			out.close();
+		} catch (IOException e) {
+			// exception handling left as an exercise for the reader
+		}
+		
+		return filename;
+
+	}//end cdf method
+	
+	
+	
 	public void extractor() {
 		// for each pac object in pacList
 		// extract out all the moves and send to the start() method
+		// so metrics will be calculated & cdf function generated.
+		int count = 0;
+		boolean last = false;
 		for (PointAndClick pac : pacList) {
-			start(pac.getMoves());
+			if (count == pacList.size()-1) last = true; //on last loop pass in last = true to start
+			start(pac.getMoves(), pac.getClickRegion(), pac.getSubjectNumber(), 
+					pac.getInstanceNumber(), last);
+			count++;
+			
 		}
 	}
 
-	private void start(ArrayList<MouseMovement> moves) {
-		// make sure there are at least 3 items to grab.
-		// then put 3 items into preprocess method
-		// on return from preprocess() scrap list item at position 0.
-		// then check to see if there are 3 more MouseMovements to grab and keep
-		// iterating.
-		
+	private void start(ArrayList<MouseMovement> moves, int clickRegion, int subjectNumber, 
+			int instanceNumber, boolean last) {
+		//input: moves from a single pac object
+		//output: upon return all metrics for pac are calculated
+		//and stored inside the x,y,r global arraylists
 		MouseMovement A;
 		MouseMovement B;
 		MouseMovement C;
@@ -87,8 +218,39 @@ public class Preprocessor {
 
 		System.out.println("num_x: " + num_x + " num_y: " + num_y + " num_r: "
 				+ num_r);
-
+		
+		//call cdf() before returning; metrics are global
+		//at this line we have xyr for single pac object
+		cdf(directionResults, x_interval, subjectNumber, instanceNumber, clickRegion, x_max);
+		cdf(curvatureAngleResults, y_interval, subjectNumber, instanceNumber, clickRegion, y_max);
+		String fileName = cdf(curvatureDistanceResults, ratio_interval, subjectNumber, instanceNumber, clickRegion, ratio_max);
+		//compile list of all file names
+		cdfFileList.add(fileName);
+		
+		if (last) writeCDF(); //write the entire list of cdfFile names to a file
 	}
+
+	private void writeCDF() {
+		//write cdf file names to memory location
+		//String pacListFileNames = "pacFileListNames.txt";
+		PrintWriter pw = null;
+		try {
+			pw = new PrintWriter("cdfFileList.txt");
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		System.out.println("names of files in cdf file list: ");
+		for (String fileName: cdfFileList){
+			pw.println(fileName);
+			System.out.println("fileName: "+fileName);
+		}
+		
+		pw.close();
+		
+	}
+
 
 	private void preprocess(MouseMovement a, MouseMovement b, MouseMovement c) {
 		// this is the method that will delegate work to make sure metrics are

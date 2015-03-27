@@ -43,6 +43,8 @@ public class LogReader {
 	private HashMap<String, Integer> sessionCount; //Key is Subject 1, Subject 2; etc.
 	//private ArrayList<PointAndClick> pacList;
 	
+	private int regionThreshold = 300; //used to divide screen into regions.
+	
 	//constructor
 	public LogReader(){
 		sessionCount = new HashMap<String, Integer>();
@@ -66,11 +68,6 @@ public class LogReader {
 		// calculate and initialize click regions
 		
 		ArrayList <PointAndClick> pacList = addCoordToEveryClick(bacFileList);
-		
-		//ArrayList<PointAndClick> pacList = addCoordToEveryClick(bacFileList);
-		//System.exit(0);
-		//ArrayList<UserEvent> clickUpdatedEventList = addCoordToEveryClick(bacFileList); //working on returning pacList from here 3/21 5:41
-		//ArrayList<PointAndClick> pacList = extractPACEvents(clickUpdatedEventList); done globally for now; will fix
 		pacList = embedClickRegion(pacList);
 		writeFilesToMemory(pacList); //possibly defer this task to another component
 		String pacFileListNames = storeListNames(pacList); //store the name of the file that contains the listing of all files
@@ -111,7 +108,7 @@ public class LogReader {
 				//System.out.println(pac.getTitle());
 				//System.out.println();
 				for (MouseMovement mm: pac.getMoves()){
-					pw.println(mm.toString());
+					pw.print(mm.toString());
 					pw.flush();
 					System.out.print(mm.toString());
 					//System.exit(0);
@@ -131,11 +128,11 @@ public class LogReader {
 		//for every pac action focus on the click locations; build list of mouseclicks to pass to function
 		//clicksWithinDistance to group the clicks into regions
 		//region# is arbitrary as it's just a distance metric. so first click read in will be region 1.
-		//clicks that we find within distance of 50 are part of region 1. If next click location is beyond 50
-		//it will be labeled as region 2. clicks within distance of 50 to region 2 are region 2 as well and so on...
+		//clicks that we find within distance of d are part of region 1. If next click location is beyond d
+		//it will be labeled as region 2. clicks within distance of d to region 2 are region 2 as well and so on...
 		//click region of 0 means that the click is erroneous and not near anything of interest.
 		ArrayList<MouseClick> clicksFromPACList = new ArrayList<MouseClick>();
-		int threshold = 50;
+		int threshold = regionThreshold;
 		
 		for (PointAndClick pac: pacList){
 			clicksFromPACList.add(pac.getClick());
@@ -176,7 +173,11 @@ public class LogReader {
 			if (addedToGroup) {
 				//endGroup = closestClicks.size(); // index of last new group
 													// member
-				for (int k = startGroup; k < endGroup; k++) {
+				
+				System.out.println("start group: "+startGroup);
+				System.out.println("endGroup: "+endGroup);
+				System.out.println("pacList size: "+pacList.size());
+				for (int k = startGroup; k < pacList.size(); k++) {
 					pacList.get(k).getClick().assignToGroup(groupNumber);
 					pacList.get(k).setClickRegion();
 				}
@@ -297,7 +298,8 @@ public class LogReader {
 		ArrayList<PointAndClick> pacList = new ArrayList <PointAndClick>();
 		
 		for (String filename: bacFileList){
-			
+			System.out.println("top of looping through bacFileList.");
+			System.out.println("filename: "+filename);
 			//logic will be looped through to do the following:
 			//open file; read the events portion; locate clicks that are next to mouse moves
 			//set the click coordinates to the predecessor mouse move
@@ -314,19 +316,15 @@ public class LogReader {
 				int subjectNumber = Integer.parseInt(trimmed);
 				int sessionNumber = Integer.parseInt(filename.substring(filename.lastIndexOf("(")+1, filename.lastIndexOf(")")).trim());
 				System.out.println("subjectNumber: "+subjectNumber+" sessionNumber: "+sessionNumber);
-				//create mouse moves and add click coordinates
-				//ArrayList<UserEvent> updatedMovementsAndClicks = generateEventList(filename, subjectNumber, sessionNumber);
-				//System.exit(0);
-				
+								
 				//copy contents of file to string
 				String userEventFile = scanDocument(scanner);
-				//if (userEventFile == null || userEventFile.length() < 1) continue; //skip null list
 				userEventFile = skipMetaData(userEventFile);
-				
+				System.out.println("after skip");
 				if (userEventFile == null) continue; //skip null movement streams
 				
 				System.out.println("userEventFile: "+userEventFile);
-				//System.exit(0);
+				
 				
 				//generateEventList will add coordinates to clicks and return list of user event stream
 				ArrayList<PointAndClick> pacObjects = generateEventList(userEventFile, subjectNumber, sessionNumber);
@@ -343,19 +341,6 @@ public class LogReader {
 			
 		}
 
-		//verify the average number of moves in any pac event.
-		/*
-		int sum = 0;
-		int average = 0;
-		int count = 0;
-		for (PointAndClick pac: pacList){
-			count++;
-			sum += pac.getMoves().size();
-			System.out.println(pac.getMoves().size());
-		}
-		average = sum/pacList.size();
-		System.out.println("average number of moves in pacList: "+average);*/
-		//System.exit(0);
 		return pacList;
 	}
 

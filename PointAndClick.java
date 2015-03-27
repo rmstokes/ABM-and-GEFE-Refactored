@@ -71,6 +71,10 @@ public class PointAndClick {
 	  clickRegion = click.getGroup();
 	}
 	
+	public void setClickRegion(int regionNumber){
+		clickRegion = regionNumber;
+	}
+	
 	public int getClickRegion(){
 		return clickRegion;
 	}
