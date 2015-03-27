@@ -40,7 +40,7 @@ public class Feed {
 		//open the files and write the contents into a stream/list of mouse movement objects
 		//associate each mouse movement list with a pac object
 		
-		System.out.println("pacListToMovementStream");
+		//System.out.println("pacListToMovementStream");
 		BufferedReader br = null;
 		ArrayList <String> fileList = new ArrayList<String>();
 		ArrayList <MouseMovement> movementList = null;
@@ -71,13 +71,29 @@ public class Feed {
 			movementList = generateMovementList(moveString);
 			int subjectNumber = obtainSubjectNumber(title);
 			int instanceNumber = obtainInstanceNumber(title);
+			int clickRegion = obtainClickRegion(title);
 			PointAndClick pac = new PointAndClick(subjectNumber, instanceNumber);
 			pac.setMoves(movementList);
+			pac.setClickRegion(clickRegion);
 			pacList.add(pac);			
 		}//end fileList loop
 		//System.exit(0);
 		System.out.println("pacList.size: "+pacList.size());
 		return pacList;
+	}
+
+	private int obtainClickRegion(String title) {
+		int clickRegion = 0;
+		title = title.trim();
+		String number = "";
+		//move through string backwards
+		int i = title.length()-1;
+		while (title.charAt(i) != ' '){
+			number = title.charAt(i) + number; //prepend #s
+			i--;
+		}
+		clickRegion = Integer.parseInt(number);
+		return clickRegion;
 	}
 
 	private ArrayList<MouseMovement> generateMovementList(String moveString) {
