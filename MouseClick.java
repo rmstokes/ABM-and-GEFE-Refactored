@@ -82,13 +82,15 @@ public class MouseClick extends UserEvent {
 	}
 	
 	public boolean equals(MouseClick mc){
-		if (this.getSignature().equals(mc.getSignature())) return true;
+		if (this.x == mc.x && this.y == mc.y){
+			return true;
+		}
 		return false;
 	}
 	
 	public String toString(){
 		
-		return "x coord: "+x+" y coord: "+y+" ";//+signature.toString();
+		return "x coord: "+x+" y coord: "+y+" clickRegion: "+groupNumber;
 	}
 
 	

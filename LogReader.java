@@ -43,7 +43,7 @@ public class LogReader {
 	private HashMap<String, Integer> sessionCount; //Key is Subject 1, Subject 2; etc.
 	//private ArrayList<PointAndClick> pacList;
 	
-	private int regionThreshold = 300; //used to divide screen into regions.
+	private int regionThreshold = 150; //used to divide screen into regions.
 	
 	//constructor
 	public LogReader(){
@@ -123,140 +123,53 @@ public class LogReader {
 	}
 
 	private ArrayList<PointAndClick> embedClickRegion(ArrayList<PointAndClick> pacList) {
-		//calculate click region and add that info to file name and write pacList to secondary memory
-		//input pacList; output pacList with click regions labeled.
-		//for every pac action focus on the click locations; build list of mouseclicks to pass to function
-		//clicksWithinDistance to group the clicks into regions
-		//region# is arbitrary as it's just a distance metric. so first click read in will be region 1.
-		//clicks that we find within distance of d are part of region 1. If next click location is beyond d
-		//it will be labeled as region 2. clicks within distance of d to region 2 are region 2 as well and so on...
-		//click region of 0 means that the click is erroneous and not near anything of interest.
-		ArrayList<MouseClick> clicksFromPACList = new ArrayList<MouseClick>();
-		int threshold = regionThreshold;
-		
+		//input: pacList with click coordinates added.
+		//output: pacList with click region added to the clicks
+		int groupNumber = 1;
+		ArrayList<MouseClick> allClicks = new ArrayList<MouseClick>();
 		for (PointAndClick pac: pacList){
-			clicksFromPACList.add(pac.getClick());
+			allClicks.add(pac.getClick());
+		}
+		for (MouseClick click: allClicks){
+			if (click.isGrouped()) continue;
+			ArrayList<MouseClick> group = clicksWithinDistance(allClicks, click);
+			
+			for (MouseClick x: group){
+				if (group.size() == 1){
+					x.assignToGroup(0);
+					break;
+				}
+				x.assignToGroup(groupNumber);
+			}
+			groupNumber++;
 		}
 		
-		ArrayList<MouseClick> closestClicks = new ArrayList<MouseClick>();
-		double distance = 0;
-		int groupNumber = 1;
-		int endGroup = 0;
-		int startGroup = 0;
-		boolean addedToGroup = false;
-		for (int i = 0; i < pacList.size() - 1; i++) {
-			for (int j = i + 1; j < pacList.size(); j++) {
-
-				// once click is part of a group then don't check it again.
-				if (pacList.get(i).getClick().isGrouped())
-					continue;
-				distance = calculateDistance(pacList.get(i).getClick(),
-						pacList.get(j).getClick());
-				if (distance <= threshold && !pacList.get(i).getClick().isGrouped()
-						&& !pacList.get(j).getClick().isGrouped()) {
-					// System.out.println("group#: "+groupNumber);
-					// clickEvents.get(i).assignToGroup(groupNumber);
-					// clickEvents.get(j).assignToGroup(groupNumber);
-					addedToGroup = true;
-					closestClicks.add(clicksFromPACList.get(i));
-					closestClicks.add(clicksFromPACList.get(j));
-					endGroup+=2; //marks the end of all clicks in the same group.
-					//clickEvents.get(i).assignToGroup(groupNumber);
-					//clickEvents.get(j).assignToGroup(groupNumber);
-					//groupNumber++;
-					// System.exit(0);
-				} 
-			}// end inner loop
-				// at this point we know that any clicks added to list inside
-				// inner loop
-				// belong to the same group.
-			if (addedToGroup) {
-				//endGroup = closestClicks.size(); // index of last new group
-													// member
-				
-				System.out.println("start group: "+startGroup);
-				System.out.println("endGroup: "+endGroup);
-				System.out.println("pacList size: "+pacList.size());
-				for (int k = startGroup; k < pacList.size(); k++) {
-					pacList.get(k).getClick().assignToGroup(groupNumber);
-					pacList.get(k).setClickRegion();
-				}
-				groupNumber++;
-				startGroup = endGroup;
-				addedToGroup = false;
-			}
-		}// end outer loop
-		
-		//clicksFromPACList = clicksWithinDistance(clicksFromPACList, 50); //50 is an arbitrary number [consistency is key]
-		
-		//loop through pacList to see if clickWithinDistance has added the regions
-		/*System.out.println("******Click Region Verification ********");
+		//set the click region for the pac objects
 		for (PointAndClick pac: pacList){
-			//pac.setClickRegion();
-			System.out.println(pac.getClickRegion());
-		}*/
+			pac.setClickRegion();
+		}
 		
-		
-		//System.out.println("pacList size: "+pacList.size());
-		//System.out.println("#clicksFromPACList: "+clicksFromPACList.size());
-		//System.exit(0);
+		/*System.out.println(allClicks);
+		System.out.println(pacList);
+		System.exit(0);*/
 		return pacList;
 	}
 	
 	
 	
-	private static ArrayList<MouseClick> clicksWithinDistance(
-			ArrayList<MouseClick> clickEvents, int threshold) {
-		// find all clicks within a certain distance of one another and then
-		// return them in a list.
-		ArrayList<MouseClick> closestClicks = new ArrayList<MouseClick>();
-		double distance = 0;
-		int groupNumber = 1;
-		int endGroup = 0;
-		int startGroup = 0;
-		boolean addedToGroup = false;
-		for (int i = 0; i < clickEvents.size() - 1; i++) {
-			for (int j = i + 1; j < clickEvents.size(); j++) {
-
-				// once click is part of a group then don't check it again.
-				if (clickEvents.get(i).isGrouped())
-					continue;
-				distance = calculateDistance(clickEvents.get(i),
-						clickEvents.get(j));
-				if (distance <= threshold && !clickEvents.get(i).isGrouped()
-						&& !clickEvents.get(j).isGrouped()) {
-					// System.out.println("group#: "+groupNumber);
-					// clickEvents.get(i).assignToGroup(groupNumber);
-					// clickEvents.get(j).assignToGroup(groupNumber);
-					addedToGroup = true;
-					closestClicks.add(clickEvents.get(i));
-					closestClicks.add(clickEvents.get(j));
-					//clickEvents.get(i).assignToGroup(groupNumber);
-					//clickEvents.get(j).assignToGroup(groupNumber);
-					//groupNumber++;
-					// System.exit(0);
-				} 
-			}// end inner loop
-				// at this point we know that any clicks added to list inside
-				// inner loop
-				// belong to the same group.
-			if (addedToGroup) {
-				endGroup = closestClicks.size(); // index of last new group
-													// member
-				for (int k = startGroup; k < endGroup; k++) {
-					closestClicks.get(k).assignToGroup(groupNumber);
-				}
-				groupNumber++;
-				startGroup = endGroup;
-				addedToGroup = false;
-			}
-		}// end outer loop
+	private ArrayList<MouseClick> clicksWithinDistance(
+			ArrayList<MouseClick> clickEvents, MouseClick ungroupedClick) {
+		//input: list of clicks (including coordinates), and ungrouped click
+		//output: list of clicks that are within threshold of ungrouped
 		
-		for (MouseClick c: closestClicks){
-			System.out.println("signature&group# "+c+" "+c.getSignature()+" "+c.getGroup());
+		ArrayList<MouseClick> closestToUngroupedClick = new ArrayList<MouseClick>();
+		for (MouseClick click: clickEvents){
+			//loop to check distance away from ungrouped for all clickEvents
+			double distance = calculateDistance(click, ungroupedClick);
+			if (distance <= regionThreshold) closestToUngroupedClick.add(click);
 		}
-		//System.exit(0);
-		return closestClicks;
+		
+		return closestToUngroupedClick;
 	}
 
 	private static double calculateDistance(MouseClick mc1,

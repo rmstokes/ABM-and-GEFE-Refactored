@@ -4,10 +4,8 @@ import java.util.HashMap;
 public class TemplateComparator {
 
 	public boolean match(Template t1, Template t2, double threshold) {
-		// test if two templates appear to belong to same subject.
-		double distance = computeManhattanDistance(t1.getFeatureSet(), t2.getFeatureSet());
-		System.out.println("t1 subject#: "+t1.getSubjectNumber()+" t2 subject#: "+t2.getSubjectNumber());
-		System.out.println("distance: "+distance+" threshold: "+threshold);
+		// test if two templates appear to belong to same subject.		
+		double distance = computeManhattanDistance(t1.getFeatureSet(), t2.getFeatureSet());		
 		return distance<=threshold;
 	}
 
@@ -19,7 +17,7 @@ public class TemplateComparator {
 		// fs2).
 		ArrayList<Double> fs1 = new ArrayList<Double>();
 		ArrayList<Double> fs2 = new ArrayList<Double>();
-
+		
 		//fill fs1 and fs2 with the metrics extracted from hashMap
 		// add x metrics to fs1
 		for (Double x : hashMap.get(0)) {

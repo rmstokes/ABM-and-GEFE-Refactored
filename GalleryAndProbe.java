@@ -55,12 +55,12 @@ public class GalleryAndProbe {
 		TemplateComparator tc = new TemplateComparator();
 		boolean isMatch = false;
 		// boolean [] subjectDeleted = new boolean[numSubjects+1];
-		for (Template galleryItem : gallery) {
-			if (galleryItem.isProbe())
-				continue;
+		for (Template galleryItem: gallery) {
+			//System.out.println("beginning of for loop in probe()");
+			if (galleryItem.isProbe()) continue;
 			numProbes++;
-			// if (subjectDeleted[galleryItem.getSubjectNumber()]) continue;
 			isMatch = tc.match(probe, galleryItem, threshold);
+			
 			if (isMatch
 					&& probe.getSubjectNumber() == galleryItem
 							.getSubjectNumber())
@@ -74,6 +74,7 @@ public class GalleryAndProbe {
 							.getSubjectNumber())
 				falseAccept++;
 		}
+		
 	}
 
 	private double[] calculateCMC(ArrayList<Subject> subjectList) {
@@ -103,11 +104,12 @@ public class GalleryAndProbe {
 	// select one template as probe and compare to all the others (gallery)
 		double gallerySize = templateList.size()-1; //all templates minus probe
 		//double numProbes = gallerySize;
+		ArrayList<Template> gallery = templateList;
 		for (Template probe : templateList) {
 			probe.setAsProbe();
-			ArrayList<Template> gallery = templateList;
-			probe(probe, gallery);
-			probe.setAsNotProbe();
+			//ArrayList<Template> gallery = templateList;
+			probe(probe, gallery);			
+			probe.setAsNotProbe();			
 		}
 		//the far,frr,tar all have their counts tabulated
 		double tar = trueAccept/numProbes;
